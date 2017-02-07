@@ -62,7 +62,7 @@
             '	font-size: 14px;'+
             '	-webkit-transform:rotate(0deg) translateZ(0);'+
             '}'+
-            '.pull-load-down.loading .pull-load-down-icon, .pull-load-up.loading .pull-load-up-icon {'+
+            '.pull-load-down.pull-load-loading .pull-load-down-icon, .pull-load-up.pull-load-loading .pull-load-up-icon {'+
             '	background-position:0 100%;'+
             '	-webkit-transform:rotate(0deg) translateZ(0);'+
             '	-webkit-transition-duration:0ms;'+
@@ -107,7 +107,7 @@
             distance:50,
             container:'<div class="pull-load-container"></div>',
             init:'<div class="pull-load-down"><span><span class="pull-load-down-icon"></span>下拉刷新...</span></div>',
-            loading:'<div class="pull-load-down loading"><span class="pull-load-down-icon"></span>刷新中...</span></div>',
+            loading:'<div class="pull-load-down pull-load-loading"><span class="pull-load-down-icon"></span>刷新中...</span></div>',
             release:'<div class="pull-load-down flip"><span><span class="pull-load-down-icon"></span>释放刷新...</span></div>',
             emptyData:'<div class="pull-load-empty-data">没有更多数据了</div>',
             time:1500,
@@ -120,7 +120,7 @@
             distance:50,
             container:'<div class="pull-load-container"></div>',
             init:'<div class="pull-load-up"><span><span class="pull-load-up-icon"></span>上拉加载更多...</span></div>',
-            loading:'<div class="pull-load-up loading"><span class="pull-load-up-icon"></span>加载中...</span></div>',
+            loading:'<div class="pull-load-up pull-load-loading"><span class="pull-load-up-icon"></span>加载中...</span></div>',
             release:'<div class="pull-load-up flip"><span><span class="pull-load-up-icon"></span>释放加载...</span></div>',
             emptyData:'<div class="pull-load-empty-data">没有更多数据了</div>',
             time:1500,
