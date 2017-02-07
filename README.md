@@ -1,11 +1,14 @@
 # pull-load
 一款兼容PC和移动设备的下拉刷新和上拉加载的组件，同时也支持滚动到底部加载和初始化后即开始加载
 
-	1.引入js：
-		<script type="text/javascript" src="dist/pull-load.min.js"></script>
-
-	2.使用：
+###1.引入js：
+``` javascript
+	<script type="text/javascript" src="dist/pull-load.min.js"></script>
+```
+###2.使用：
+``` javascript
 		new PullLoad({
+		//整个滚动层的容器的dom
 		container:document.getElementById("outerScroller"),
 		down:{
 		    distance:50,//默认距离
@@ -32,8 +35,9 @@
 		    }
 		}
 	    });
-
-	3.up：
+```
+###3.up：
+``` javascript
 		up:{
 			//这个距离是用于匹配是显示上拉加载更多，还是显示释放加载
 			distance:50,
@@ -61,7 +65,9 @@
 				end(isEmptyData)
 			}
 		}
-	4.down（描述同up）:
+```
+###4.down（描述同up）:
+``` javascript
 		down:{
 			//这个距离是用于匹配是显示上拉加载更多，还是显示释放加载，同时也是要创建的底部div的默认高度
 			distance:50,
@@ -73,3 +79,4 @@
 			enable:true,
 			callback:null
 		}
+```
