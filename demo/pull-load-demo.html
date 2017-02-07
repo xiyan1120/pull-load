@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no">
+    <title>Title</title>
+    <style s>
+        body{
+            overflow: hidden;
+        }
+        .outerScroller{
+            position: absolute;
+            top:0px;
+            bottom:0px;
+            width:100%;
+            left:0px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        li{
+            list-style-type: none;
+            height:55px;
+            background: #ccc;
+            border-bottom: solid 1px #fff;
+            text-align: left;
+            line-height: 35px;
+            padding-left:15px;
+        }
+        ul{
+            width:100%;
+            padding:0px;
+            margin:0;
+        }
+    </style>
+</head>
+<body>
+<div class="outerScroller" id="outerScroller">
+    <ul>
+        <li>1</li>
+        <li>2</li>
+        <li>3</li>
+        <li>4</li>
+        <li>5</li>
+        <li>6</li>
+        <li>7</li>
+		<li>8</li>
+        <li>9</li>
+        <li>10</li>
+        <li>1</li>
+        <li>2</li>
+        <li>3</li>
+        <li>4</li>
+        <li>5</li>
+    </ul>
+</div>
+<script type="text/javascript" src="../dist/pull-load.min.js"></script>
+<script>
+    new PullLoad({
+        container:document.getElementById("outerScroller"),
+        down:{
+            distance:50,//默认距离
+            enable:true,
+            callback:function (end) {
+                //这个当作测试用。
+                setTimeout(function () {
+                    console.log("end");
+                    var isEmptyData = false;
+                    end(isEmptyData);
+                },1500);
+            }
+        },
+        up:{
+            distance:50,//默认距离，也是创建的div的默认g高度
+            isScrollLoad:false,
+            isInitLoad:false,
+            enable:true,
+            callback:function (end) {
+                //这个当作测试用。
+                setTimeout(function () {
+                    console.log("end");
+                    var isEmptyData = false;
+                    end(isEmptyData);
+                },1500);
+            }
+        }
+    });
+</script>
+</body>
+</html>
