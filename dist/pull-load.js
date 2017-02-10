@@ -1,7 +1,6 @@
 /**
  * Created by Males on 2017/2/6.
  * 上拉加载，下拉刷新，滚动到底部加载
- * git ：https://github.com/xiyan1120/pull-load.git
  */
 (function (wid, dcm) {
     var win = wid;
@@ -62,7 +61,7 @@
             '	font-size: 14px;'+
             '	-webkit-transform:rotate(0deg) translateZ(0);'+
             '}'+
-            '.pull-load-down.pull-load-loading .pull-load-down-icon, .pull-load-up.pull-load-loading .pull-load-up-icon {'+
+            '.pull-load-down.loading .pull-load-down-icon, .pull-load-up.loading .pull-load-up-icon {'+
             '	background-position:0 100%;'+
             '	-webkit-transform:rotate(0deg) translateZ(0);'+
             '	-webkit-transition-duration:0ms;'+
@@ -94,6 +93,7 @@
     function PullLoad(config) {
         this.isTouchWebkit = "ontouchstart" in win && "WebKitCSSMatrix" in win;
         this.container = config.container;
+        this.scrollBar = config.scrollBar;
         this.touchstart = "touchstart";
         this.touchmove = "touchmove";
         this.touchend = 'touchend';
@@ -107,10 +107,9 @@
             distance:50,
             container:'<div class="pull-load-container"></div>',
             init:'<div class="pull-load-down"><span><span class="pull-load-down-icon"></span>下拉刷新...</span></div>',
-            loading:'<div class="pull-load-down pull-load-loading"><span class="pull-load-down-icon"></span>刷新中...</span></div>',
+            loading:'<div class="pull-load-down loading"><span class="pull-load-down-icon"></span>刷新中...</span></div>',
             release:'<div class="pull-load-down flip"><span><span class="pull-load-down-icon"></span>释放刷新...</span></div>',
             emptyData:'<div class="pull-load-empty-data">没有更多数据了</div>',
-            time:1500,
             id:'_____pull_down____',
             enable:true,
             callback:null
@@ -120,10 +119,9 @@
             distance:50,
             container:'<div class="pull-load-container"></div>',
             init:'<div class="pull-load-up"><span><span class="pull-load-up-icon"></span>上拉加载更多...</span></div>',
-            loading:'<div class="pull-load-up pull-load-loading"><span class="pull-load-up-icon"></span>加载中...</span></div>',
+            loading:'<div class="pull-load-up loading"><span class="pull-load-up-icon"></span>加载中...</span></div>',
             release:'<div class="pull-load-up flip"><span><span class="pull-load-up-icon"></span>释放加载...</span></div>',
             emptyData:'<div class="pull-load-empty-data">没有更多数据了</div>',
-            time:1500,
             id:'_____pull_up____',
             enable:true,
             isScrollLoad:false,//是否滚动到底部就加载。
@@ -132,7 +130,11 @@
         },config.up ? config.up : {});
         this.baseRefreshContainer = '<div class="pull-load-container"></div>';
         this.startY = 0;
+        this.moveY = 0;
+        this.elStartY = -1;//元素一开始进入可视区域的时的鼠标坐标
         this.startScrollTop = 0;
+        this.bottomDiff = 0;//当容器不是滚动条容器时，容器距离滚动条底部的偏移量
+        this.topDiff = 0;//当容器不是滚动条容器时，容器距离滚动条底部的偏移量
         this.type = "";//up or down
         this.canRefresh = false;
         this.canLoadMore = false;
@@ -151,6 +153,10 @@
             var self = this;
             var $container = self.container;
             if($container){
+                //如果不存在滚动条的设置，默认容器就是滚动条
+                if(!self.scrollBar){
+                    self.scrollBar = $container;
+                }
                 //如果初始化的时候就加载数据的话，此时是没有上拉和滚动到底的问题的
                 if(self.up.isInitLoad){
                     self.createDiv(self.up,true,true);
@@ -171,19 +177,20 @@
                 __on(self.touchend,$container,function () {
                     self.touch(event);
                 });
-                __on('scroll',$container,function () {
+                __on('scroll',self.scrollBar.tagName.toLowerCase() === "body" ? win : self.scrollBar,function () {
                     self.scroll(event);
                 });
                 if(!self.isTouchWebkit){
                     //禁止div的内容被选中，在PC不禁止的话，拖动的时候容易选中内容，
                     //使用事件监听的方式不起作用。
-                    $container.onselectstart=function(){return false;};
-                    $container.onselect=function(){doc.selection.empty();};
+                    var ___container = self.scrollBar.tagName.toLowerCase() === "body" ? document : self.scrollBar;
+                    ___container.onselectstart=function(){return false;};
+                    ___container.onselect=function(){doc.selection.empty();};
                     doc.addEventListener(self.touchend, function () {
                         self.touch(event);
                     }, false);
                 }
-            }else{
+            }else{  
                 console.log("容器设置错误");
             }
         },
@@ -192,58 +199,90 @@
             var _up = self.up;
             if(!_up.enable){ return false; }
             var $container = self.container;
+            var $scroll = self.scrollBar;
             if(_up.isScrollLoad && !self.isLoading){
-                var bottomDiff = $container.scrollHeight - ($container.scrollTop + $container.offsetHeight);
+                var scrollBottomOffset = self.elPos($scroll).bottom;
+                var containerBottomOffset = self.elPos($container).bottom;
+                self.bottomDiff = scrollBottomOffset - containerBottomOffset;
+                var bottomOffset = 0;
+                if($scroll.tagName.toLowerCase() === "body"){
+                    bottomOffset = self.getScrollHeight() - (self.getScrollTop() + self.getWindowHeight());
+                }else{
+                    bottomOffset = $scroll.scrollHeight - ($scroll.scrollTop + $scroll.clientHeight);
+                }
+                bottomOffset = bottomOffset - self.bottomDiff;//扣除底部的偏移量
                 //在和底部相差一定距离的时候再添加底部的div
-                if(_up.init && bottomDiff - _up.distance < 0){
-                    if(!self.scrollLoadHasInsertDom){
-                        self.createDiv(_up,true,true);
-                    }
+                if(_up.init && bottomOffset - _up.distance < 0 && !self.scrollLoadHasInsertDom){
+                    self.createDiv(_up,true);
                 }
                 //PC端触摸的时候要设置滚动
                 if(isTouch && !self.isTouchWebkit){
                     var _absMoveY = Math.abs(distance);
-                    $container.scrollTop = self.startScrollTop + _absMoveY;
+                    $scroll.scrollTop = self.startScrollTop + _absMoveY;
                 }
                 //如果滚动到底部了，就执行开始加载。
-                if(_up.el && bottomDiff <= 0){
+                if(_up.el && bottomOffset <= 0){
                     self.upLoadMore();
                 }
             }
         },
         touch:function (event) {
             var self = this;
-            var $container = self.container;
+            var $scroll = self.scrollBar;
             event = event || win.event;
-            if(self.isLoading){
-                event.preventDefault();//在加载的时候阻止浏览器的默认行为
-            }
             event.stopPropagation();
             switch (event.type) {
                 case self.touchstart:
+                    self.startY = self.pos(event).y;
+                    self.startScrollTop = $scroll.tagName.toLowerCase() === "body" ? self.getScrollTop() : $scroll.scrollTop;
+                    self.type = "";
+                    self.isTouchStart = true;
                     if(!self.isLoading){
-                        self.startY = self.pos(event).y;
-                        self.startScrollTop = $container.scrollTop;
                         self.isLoading = false;
                         self.canRefresh = false;
                         self.canLoadMore = false;
-                        self.type = "";
-                        self.isTouchStart = true;
                         self.hasInsertDom = false;
+                        self.elStartY = -1;
                     }
                     break;
                 case self.touchmove:
                     if(self.isTouchStart){
                         //鼠标没按住就不要执行各种操作了，当然不执行的话 还是要这些下end，要不有些状态可能就没有被修改过来了
                         if(!self.isTouchWebkit && event.buttons === 0){
-                            self.end();
                             return false;
                         }
-                        var moveY = self.pos(event).y;
-                        var distance = moveY - self.startY;
+                        //处理反向时的坐标和偏移量
+                        self.moveY = self.pos(event).y;
+                        var distance = self.moveY - self.startY;
                         if(!self.type) {
                             if(distance < 0) self.type = "up";
                             else if(distance > 0) self.type = "down";
+                        }else{
+                            if(!self.isLoading){
+                                //处理反向时的问题。
+                                var _newDistance = self.moveY - self.startY;
+                                var _scrollTop = $scroll.tagName.toLowerCase() === "body" ? self.getScrollTop() : $scroll.scrollTop;
+                                if((self.type == "up" && _newDistance > 0) || (self.type === "down" && _newDistance < 0)){
+                                    self.startY = self.pos(event).y;
+                                    self.startScrollTop = _scrollTop;
+                                    self.hasInsertDom = false;
+                                    self.elStartY = -1;
+                                    if(self.type == "up"){
+                                        self.type = "down";
+                                        if(self.up.el && self.up.el.parentNode){
+                                            self.up.el.parentNode.removeChild(self.up.el);
+                                            self.up.el = null;
+                                        }
+                                    }else{
+                                        self.type = "up";
+                                        if(self.down.el && self.down.el.parentNode){
+                                            self.down.el.parentNode.removeChild(self.down.el);
+                                            self.down.el = null;
+                                        }
+                                    }
+                                    return false;
+                                }
+                            }
                         }
                         switch (self.type){
                             case "up":
@@ -258,30 +297,33 @@
                     }
                     break;
                 case self.touchend:
-                    self.end();
+                    self.end(self.type,self.canRefresh,self.canLoadMore);
                     break;
             }
         },
-        end:function () {
+        end:function (type,canRefresh,canLoadMore) {
             var self = this;
             self.isTouchStart = false;
-            if(self.canRefresh){
-                self._end(self.down,false);
-            }else if(self.canLoadMore){
-                self._end(self.up,true);
+            if(canRefresh){
+                self._end(self.down,false,canLoadMore,canRefresh);
+            }else if(canLoadMore){
+                self._end(self.up,true,canLoadMore,canRefresh);
             }else{
-                switch (self.type){
-                    case "up": self.back(self.up,true); break;
-                    case "down": self.back(self.down,false); break;
+                //不加载中的话再恢复，加载中的时候由加载后去恢复
+                if(!self.isLoading){
+                    switch (type){
+                        case "up": self.back(self.up,true); break;
+                        case "down": self.back(self.down,false); break;
+                    }
                 }
             }
         },
-        _end:function (obj,isUp) {
+        _end:function (obj,isUp,canLoadMore,canRefresh) {
             var self = this;
             if(isUp && obj.isScrollLoad){
                 return false;
             }
-            if((isUp && self.canLoadMore) || (!isUp && self.canRefresh)){
+            if((isUp && canLoadMore) || (!isUp && canRefresh)){
                 self.setCan(isUp,false);
                 self.setHeight(obj.el,obj.distance);
                 self.transition(obj.el,0.5);
@@ -293,12 +335,6 @@
                     self.isEmptyData = isEmptyData;
                     self.back(obj,isUp);
                 });
-                else{
-                    //这个当作测试用。
-                    setTimeout(function () {
-                        self.back(obj,isUp);
-                    },obj.time);
-                }
             }else{
                 self.back(obj,isUp);
             }
@@ -306,13 +342,12 @@
         back:function (obj,isUp) {
             var self = this;
             if(!isUp){
-//                self.container.scrollTop = 0;
+               // self.scrollBar.scrollTop = 0;
             }else {
                 if(obj.isScrollLoad) return false;
             }
             if(obj.el){
                 if(self.isEmptyData){
-                    // _up.el.innerHTML = _up.emptyData;
                     obj.el.innerHTML = obj.emptyData;
                     obj.enable = false;//没有数据就直接禁用了
                     self.isLoading = false;
@@ -333,97 +368,139 @@
         upAction:function (e,distance) {
             var self = this;
             var $container = self.container;
+            var $scroll = self.scrollBar;
             var _up = self.up;
             if(!_up.enable || !_up.init){
                 return false;
             }
-            var bottomDiff = $container.scrollHeight - ($container.scrollTop + $container.offsetHeight);
-            //在和底部相差一定距离的时候再添加底部的div
-            self.action((_up.init && bottomDiff - _up.distance < 0 && !self.hasInsertDom) , _up ,e,distance, true);
+
+            var scrollTop = $scroll.tagName.toLowerCase() === "body" ? self.getScrollTop() : $scroll.scrollTop;
+            var _absMoveY = Math.abs(distance);
+            var scrollBottomOffset = self.elPos($scroll).bottom;
+            var containerBottomOffset = self.elPos($container).bottom;
+            self.bottomDiff = scrollBottomOffset - containerBottomOffset;
+            var bottomOffset = 0;
+            if($scroll.tagName.toLowerCase() === "body"){
+                bottomOffset = self.getScrollHeight() - (scrollTop + self.getWindowHeight());
+            }else{
+                bottomOffset = $scroll.scrollHeight - (scrollTop + $scroll.clientHeight);
+            }
+            //不禁用的话，鼠标一直按着在继续上拉的时候，就会出现移动了一定距离后，滚动条才开始动
+            if(distance > 0 && scrollTop === 0){
+                return false;
+            }
+            if(self.isLoading){
+                //设置滚动条的位置
+                $scroll.scrollTop = _absMoveY + self.startScrollTop;
+                return false;
+            }
+            bottomOffset = bottomOffset - self.bottomDiff;//扣除底部的偏移量
+            //移动到差不多底部的时候再创建元素。
+            if(_up.init && bottomOffset - _up.distance < 0 && !self.hasInsertDom){
+                self.createDiv(_up,true);
+            }
+
+            var _absInitDis = Math.abs(_up.distance);
+            if(_up.el){
+                //记录元素要可视的时候的初始鼠标坐标。
+                if(bottomOffset < 5 && self.elStartY < 0)
+                    self.elStartY = self.pos(e).y;
+                var _absElMoveY = Math.abs(self.pos(e).y - self.elStartY);
+                if(self.elStartY < 0 || self.pos(e).y > self.elStartY){
+                    _absElMoveY = 0;//小于0，说明还不可见
+                }
+                if(e.cancelable)
+                    e.preventDefault();
+                var elInfo = self.updateElInfo(_up,true,_absElMoveY,_absInitDis);
+                _up.el.innerHTML = elInfo.innerHtml;
+                //滚动条为0，说明内容的总高度比容器的高度小，此时高度设置为初始的高度就可以了。
+                if(!self.isScrollLoad && $scroll.scrollTop === 0){
+                    if(elInfo.offsetY >= _up.distance){
+                        elInfo.offsetY = _up.distance;
+                    }
+                }
+                self.setHeight(_up.el,elInfo.offsetY);
+                $scroll.scrollTop = _absMoveY + self.startScrollTop;
+            }else{
+                if(!self.isTouchWebkit)
+                    $scroll.scrollTop = _absMoveY+ self.startScrollTop;
+            }
         },
         downAction:function (e,distance) {
             var self = this;
             var $container = self.container;
+            var $scroll = self.scrollBar;
             var _down = self.down;
             if(!_down.enable || !_down.init){
                 return false;
             }
-            if($container.scrollTop > 0){
+            var scrollTop = $scroll.tagName.toLowerCase() === "body" ? self.getScrollTop() : $scroll.scrollTop;
+            var scrollTopOffset = self.elPos($scroll).top;
+            var containerTopOffset = self.elPos($container).top;
+            self.topDiff = containerTopOffset - scrollTopOffset;
+            var topOffset = scrollTop - self.topDiff;//扣除顶部的偏移量
+            var _absMoveY = Math.abs(distance);
+            if(topOffset > 0){
                 if(!self.isTouchWebkit){
                     //pc端不能拖动，所以要手动修改滚动条的位置
-                    var _absMoveY = Math.abs(distance);
-                    $container.scrollTop = self.startScrollTop - _absMoveY;
-                    if($container.scrollTop > 0){
-                        return false;
-                    }
-                }else{
-                    return false;
+                    $scroll.scrollTop = self.startScrollTop - _absMoveY;
                 }
+                return false;
             }
-            self.action(!self.hasInsertDom , _down,e,distance,false);
-        },
-        action:function(canInsertDom,obj,e,distance,isUp){
-            var self = this;
-            var $container = self.container;
-            //在和底部相差一定距离的时候再添加底部的div
-            if(canInsertDom){
-                self.createDiv(obj,isUp);
+            if(self.isLoading) {
+                $scroll.scrollTop = self.startScrollTop - _absMoveY;
+                return false;
             }
-            var curInnerHtml = "";
-            var _offsetY = 0;
-            var _absMoveY = Math.abs(distance);
-            if(!isUp) _absMoveY = _absMoveY - self.startScrollTop;//存在滚动条的时候，偏移的距离要扣去滚动的高度
-            else{
-                var insertDomHeight = 0;
-                if(canInsertDom){
-                    insertDomHeight = obj.distance;//因为创建的时候是初始高度。
+            if(!self.hasInsertDom){
+                self.createDiv(_down,false);
+            }
+            var _absInitDis = Math.abs(_down.distance);
+            if(_down.el){
+                //记录元素要可时的时候的初始鼠标坐标。
+                if(topOffset <= 0 && self.elStartY < 0)
+                    self.elStartY = self.pos(e).y;
+                var _absElMoveY = Math.abs(self.pos(e).y - self.elStartY);
+                if(self.elStartY < 0 || self.pos(e).y < self.elStartY){
+                    _absElMoveY = 0;//小于0，说明还不可见
                 }
-                _absMoveY = _absMoveY - ($container.scrollTop + insertDomHeight - self.startScrollTop);//后面是滚动的距离
-            }
-            var _absInitDis = Math.abs(obj.distance);
-            if(obj.el){
                 if(e.cancelable)
                     e.preventDefault();
-                self.canRefresh = false;
-                self.canLoadMore = false;
-                // 下拉距离 <= 初始距离
-                if(_absMoveY <= _absInitDis){
-                    _offsetY = _absMoveY;
-                    curInnerHtml = obj.init;
-                    self.setCan(isUp,false);
-                    // 指定距离 < 下拉距离 < 指定距离*2
-                }else if(_absMoveY > _absInitDis && _absMoveY <= _absInitDis*2){
-                    _offsetY = _absInitDis+(_absMoveY-_absInitDis)*0.5;
-                    curInnerHtml = obj.release;
-                    self.setCan(isUp,true);
-                    // 下拉距离 > 指定距离*2
-                }else{
-                    _offsetY = _absInitDis+_absInitDis*0.5+(_absMoveY-_absInitDis*2)*0.2;
-                    curInnerHtml = obj.release;
-                    self.setCan(isUp,true);
-                }
-                obj.el.innerHTML = curInnerHtml;
-                if(isUp){
-                    //如果可滚动的高度和容器本身的高度是一样的，并且滚动条为0，说明内容的总高度比容器的高度小，此时高度设置为初始的高度就可以了。
-                    if(!self.isScrollLoad && $container.scrollHeight === $container.offsetHeight && $container.scrollTop === 0){
-                        if(_offsetY >= obj.distance){
-                            _offsetY = obj.distance;
-                        }
-                    }
-                    self.setHeight(obj.el,_offsetY);
-                    $container.scrollTop = _offsetY+ $container.scrollTop;
-                }else{
-                    self.setHeight(obj.el,_offsetY);
-                }
-            }else{
-                if(isUp && !self.isTouchWebkit)
-                    $container.scrollTop = _absMoveY+ self.startScrollTop;
+                var elInfo = self.updateElInfo(_down,false,_absElMoveY,_absInitDis);
+                _down.el.innerHTML = elInfo.innerHtml;
+                self.setHeight(_down.el,elInfo.offsetY);
             }
+        },
+        updateElInfo:function (obj,isUp,_absElMoveY,_absInitDis) {
+            var self = this;
+            var curInnerHtml = obj.init;
+            var _offsetY = 0;
+            self.canRefresh = false;
+            self.canLoadMore = false;
+            // 下拉距离 <= 初始距离
+            if(_absElMoveY <= _absInitDis){
+                _offsetY = _absElMoveY;
+                curInnerHtml = obj.init;
+                self.setCan(isUp,false);
+                // 指定距离 < 下拉距离 < 指定距离*2
+            }else if(_absElMoveY > _absInitDis && _absElMoveY <= _absInitDis*2){
+                _offsetY = _absInitDis+(_absElMoveY-_absInitDis)*0.5;
+                curInnerHtml = obj.release;
+                self.setCan(isUp,true);
+                // 下拉距离 > 指定距离*2
+            }else{
+                _offsetY = _absInitDis+_absInitDis*0.5+(_absElMoveY-_absInitDis*2)*0.2;
+                curInnerHtml = obj.release;
+                self.setCan(isUp,true);
+            }
+            return {
+                innerHtml:curInnerHtml,
+                offsetY:_offsetY
+            };
         },
         upLoadMore:function (isInitLoad) {
             var self = this;
             var _up = self.up;
-            if(_up.el){
+            if(_up.el && !self.isLoading){
                 _up.el.innerHTML = _up.loading;
                 self.isLoading = true;
                 //正常情况下，退回去是要在外面去调用的。
@@ -506,12 +583,58 @@
             }else{
                 e = e || win.event;
                 var D = doc.documentElement;
-                if (e.pageX) return {x: e.pageX, y: e.pageY};
+                //这个返回的坐标会一直闪啊
+                // if (e.pageX) return {x: e.pageX, y: e.pageY};
                 return {
                     x: e.clientX + D.scrollLeft - D.clientLeft,
                     y: e.clientY + D.scrollTop - D.clientTop
                 };
             }
+        },
+        //获取元素距离页面的坐标
+        elPos:function (el) {
+            var rect = el.getBoundingClientRect();
+            var top = document.documentElement.clientTop;
+            var left= document.documentElement.clientLeft;
+            return{
+                top    :   rect.top - top,
+                bottom :   rect.bottom - top,
+                left   :   rect.left - left,
+                right  :   rect.right - left
+            };
+        },
+        getScrollTop:function (){
+            var scrollTop = 0, bodyScrollTop = 0, documentScrollTop = 0;
+            if(document.body){
+                bodyScrollTop = document.body.scrollTop;
+            }
+            if(document.documentElement){
+                documentScrollTop = document.documentElement.scrollTop;
+            }
+            scrollTop = (bodyScrollTop - documentScrollTop > 0) ? bodyScrollTop : documentScrollTop;
+            return scrollTop;
+        },
+        //文档的总高度
+        getScrollHeight :function(){
+            var scrollHeight = 0, bodyScrollHeight = 0, documentScrollHeight = 0;
+            if(document.body){
+                bodyScrollHeight = document.body.scrollHeight;
+            }
+            if(document.documentElement){
+                documentScrollHeight = document.documentElement.scrollHeight;
+            }
+            scrollHeight = (bodyScrollHeight - documentScrollHeight > 0) ? bodyScrollHeight : documentScrollHeight;
+            return scrollHeight;
+        },
+        //浏览器视口的高度
+        getWindowHeight:function (){
+            var windowHeight = 0;
+            if(document.compatMode == "CSS1Compat"){
+                windowHeight = document.documentElement.clientHeight;
+            }else{
+                windowHeight = document.body.clientHeight;
+            }
+            return windowHeight;
         },
         setHeight: function (dom,diff) {
             if(dom) dom.style.height = diff + 'px';
