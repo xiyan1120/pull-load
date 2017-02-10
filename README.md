@@ -1,14 +1,16 @@
 # pull-load
 一款兼容PC和移动设备的下拉刷新和上拉加载的组件，同时也支持滚动到底部加载和初始化后即开始加载
 
-gitHub: https://github.com/xiyan1120/pull-load </br>
+gitHub: https://github.com/xiyan1120/pull-load   
+OSChina: https://git.oschina.net/564468767/pull-load  
+尊重原创，转载请注明转自：https://my.oschina.net/u/164010/blog/833722
 
-![](https://github.com/xiyan1120/pull-load/raw/master/imgs/1.png) </br>
-![](https://github.com/xiyan1120/pull-load/raw/master/imgs/2.png) </br>
-![](https://github.com/xiyan1120/pull-load/raw/master/imgs/3.png) </br>
-![](https://github.com/xiyan1120/pull-load/raw/master/imgs/4.png) </br>
-![](https://github.com/xiyan1120/pull-load/raw/master/imgs/5.png) </br>
-![](https://github.com/xiyan1120/pull-load/raw/master/imgs/6.png) </br>
+![](https://github.com/xiyan1120/pull-load/raw/master/imgs/1.png)   
+![](https://github.com/xiyan1120/pull-load/raw/master/imgs/2.png)   
+![](https://github.com/xiyan1120/pull-load/raw/master/imgs/3.png)   
+![](https://github.com/xiyan1120/pull-load/raw/master/imgs/4.png)   
+![](https://github.com/xiyan1120/pull-load/raw/master/imgs/5.png)   
+![](https://github.com/xiyan1120/pull-load/raw/master/imgs/6.png)   
 ###1.引入js：
 ``` javascript
 	<script type="text/javascript" src="dist/pull-load.min.js"></script>
@@ -18,6 +20,8 @@ gitHub: https://github.com/xiyan1120/pull-load </br>
 		new PullLoad({
 		//整个滚动层的容器的dom
 		container:document.getElementById("outerScroller"),
+                //指定滚动条的dom，不指定默认为container  
+                //scrollBar:document.getElementsByTagName("body")[0],    
 		down:{
 		    distance:50,//默认距离
 		    enable:true,
