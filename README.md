@@ -20,8 +20,8 @@ OSChina: https://git.oschina.net/564468767/pull-load
 		new PullLoad({
 		//整个滚动层的容器的dom
 		container:document.getElementById("outerScroller"),
-                //指定滚动条的dom，不指定默认为container  
-                //scrollBar:document.getElementsByTagName("body")[0],    
+        //指定滚动条的dom，不指定默认为container  
+        //scrollBar:document.getElementsByTagName("body")[0],    
 		down:{
 		    distance:50,//默认距离
 		    enable:true,
@@ -58,7 +58,7 @@ OSChina: https://git.oschina.net/564468767/pull-load
 			//初始化时显示的html
 			init:'<div class="pull-load-up"><span><span class="pull-load-up-icon"></span>上拉加载更多...</span></div>',
 			//加载时显示的html
-			loading:'<div class="pull-load-up loading"><span class="pull-load-up-icon"></span>加载中...</span></div>',
+			loading:'<div class="pull-load-up pull-load-loading"><span class="pull-load-up-icon"></span>加载中...</span></div>',
 			//释放的时候显示的html
 			release:'<div class="pull-load-up flip"><span><span class="pull-load-up-icon"></span>释放加载...</span></div>',
 			//没有数据的时候显示的html
@@ -85,7 +85,7 @@ OSChina: https://git.oschina.net/564468767/pull-load
 			distance:50,
 			container:'<div class="pull-load-container"></div>',
 			init:'<div class="pull-load-down"><span><span class="pull-load-down-icon"></span>下拉刷新...</span></div>',
-			loading:'<div class="pull-load-down loading"><span class="pull-load-down-icon"></span>刷新中...</span></div>',
+			loading:'<div class="pull-load-down pull-load-loading"><span class="pull-load-down-icon"></span>刷新中...</span></div>',
 			release:'<div class="pull-load-down flip"><span><span class="pull-load-down-icon"></span>释放刷新...</span></div>',
 			emptyData:'<div class="pull-load-empty-data">没有更多数据了</div>',
 			enable:true,
