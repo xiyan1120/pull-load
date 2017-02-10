@@ -53,11 +53,11 @@
             '.pull-load-up .pull-load-up-icon  {'+
             '	-webkit-transform:rotate(-180deg) translateZ(0);'+
             '}'+
-            '.pull-load-down.flip .pull-load-down-icon {'+
+            '.pull-load-down.pull-load-flip .pull-load-down-icon {'+
             '	font-size: 14px;'+
             '	-webkit-transform:rotate(-180deg) translateZ(0);'+
             '}'+
-            '.pull-load-up.flip .pull-load-up-icon {'+
+            '.pull-load-up.pull-load-flip .pull-load-up-icon {'+
             '	font-size: 14px;'+
             '	-webkit-transform:rotate(0deg) translateZ(0);'+
             '}'+
@@ -108,7 +108,7 @@
             container:'<div class="pull-load-container"></div>',
             init:'<div class="pull-load-down"><span><span class="pull-load-down-icon"></span>下拉刷新...</span></div>',
             loading:'<div class="pull-load-down pull-load-loading"><span class="pull-load-down-icon"></span>刷新中...</span></div>',
-            release:'<div class="pull-load-down flip"><span><span class="pull-load-down-icon"></span>释放刷新...</span></div>',
+            release:'<div class="pull-load-down pull-load-flip"><span><span class="pull-load-down-icon"></span>释放刷新...</span></div>',
             emptyData:'<div class="pull-load-empty-data">没有更多数据了</div>',
             id:'_____pull_down____',
             enable:true,
@@ -120,7 +120,7 @@
             container:'<div class="pull-load-container"></div>',
             init:'<div class="pull-load-up"><span><span class="pull-load-up-icon"></span>上拉加载更多...</span></div>',
             loading:'<div class="pull-load-up pull-load-loading"><span class="pull-load-up-icon"></span>加载中...</span></div>',
-            release:'<div class="pull-load-up flip"><span><span class="pull-load-up-icon"></span>释放加载...</span></div>',
+            release:'<div class="pull-load-up pull-load-flip"><span><span class="pull-load-up-icon"></span>释放加载...</span></div>',
             emptyData:'<div class="pull-load-empty-data">没有更多数据了</div>',
             id:'_____pull_up____',
             enable:true,
@@ -262,12 +262,12 @@
                                 //处理反向时的问题。
                                 var _newDistance = self.moveY - self.startY;
                                 var _scrollTop = $scroll.tagName.toLowerCase() === "body" ? self.getScrollTop() : $scroll.scrollTop;
-                                if((self.type == "up" && _newDistance > 0) || (self.type === "down" && _newDistance < 0)){
+                                if((self.type === "up" && _newDistance > 0) || (self.type === "down" && _newDistance < 0)){
                                     self.startY = self.pos(event).y;
                                     self.startScrollTop = _scrollTop;
                                     self.hasInsertDom = false;
                                     self.elStartY = -1;
-                                    if(self.type == "up"){
+                                    if(self.type === "up"){
                                         self.type = "down";
                                         if(self.up.el && self.up.el.parentNode){
                                             self.up.el.parentNode.removeChild(self.up.el);
@@ -293,11 +293,15 @@
                                 }
                                 break;
                             case "down": self.downAction(event,distance); break;
+                            default :
+                                break;
                         }
                     }
                     break;
                 case self.touchend:
                     self.end(self.type,self.canRefresh,self.canLoadMore);
+                    break;
+                default :
                     break;
             }
         },
@@ -414,10 +418,8 @@
                 var elInfo = self.updateElInfo(_up,true,_absElMoveY,_absInitDis);
                 _up.el.innerHTML = elInfo.innerHtml;
                 //滚动条为0，说明内容的总高度比容器的高度小，此时高度设置为初始的高度就可以了。
-                if(!self.isScrollLoad && $scroll.scrollTop === 0){
-                    if(elInfo.offsetY >= _up.distance){
-                        elInfo.offsetY = _up.distance;
-                    }
+                if(!self.isScrollLoad && $scroll.scrollTop === 0 && elInfo.offsetY >= _up.distance){
+                    elInfo.offsetY = _up.distance;
                 }
                 self.setHeight(_up.el,elInfo.offsetY);
                 $scroll.scrollTop = _absMoveY + self.startScrollTop;
@@ -543,6 +545,8 @@
                     obj.el.id = obj.id;
                 }
                 obj.el.innerHTML = obj.init;
+                //生成随机数，并添加到id里面去，使其可以支持多个加载和刷新
+                obj.el.id += self.randomString(6);
                 obj.id = obj.el.id;
                 var $dom = doc.getElementById(obj.id);
                 if($dom && $dom.parentNode){
@@ -629,7 +633,7 @@
         //浏览器视口的高度
         getWindowHeight:function (){
             var windowHeight = 0;
-            if(document.compatMode == "CSS1Compat"){
+            if(document.compatMode === "CSS1Compat"){
                 windowHeight = document.documentElement.clientHeight;
             }else{
                 windowHeight = document.body.clientHeight;
@@ -658,6 +662,16 @@
             else
                 self.down.el = null;
         },
+        randomString:function(len) {
+            len = len || 32;
+            var $chars = "ABCDEFGHIJKLMNOPQRSTVUWXYZabcdefghijklmnopqrstvuwxyz0123456789";
+            var maxPos = $chars.length;
+            var pwd = '';
+            for (i = 0; i < len; i++) {
+                pwd += $chars.charAt(Math.floor(Math.random() * maxPos));
+            }
+            return pwd;
+        },
         prependChild: function(p,o){
             if(p.hasChildNodes()){
                 p.insertBefore(o,p.firstChild);
@@ -667,9 +681,9 @@
         }
     };
 
-    if (typeof exports == "object") {
+    if (typeof exports === "object") {
         module.exports = PullLoad;
-    } else if (typeof define == "function" && define.amd) {
+    } else if (typeof define === "function" && define.amd) {
         define([], function () {
             return PullLoad;
         });
